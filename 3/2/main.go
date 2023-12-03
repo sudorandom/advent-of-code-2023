@@ -9,49 +9,66 @@ import (
 )
 
 func main() {
-	content, err := os.ReadFile("./3/input")
+	content, err := os.ReadFile("./3/2/input")
 	if err != nil {
 		log.Fatalf("error reading input: %s", err)
 	}
 
-	var total int64
-	var inPart bool
+	inGears := map[Location]struct{}{}
 	var numberStr string
+	assemblyCounts := map[Location]int{}
+	assemblyRatios := map[Location]int64{}
 	renderPart := func() {
 		defer func() {
 			numberStr = ""
+			inGears = map[Location]struct{}{}
 		}()
-		if !inPart {
+		if len(inGears) == 0 {
 			return
 		}
-		inPart = false
 		num, err := strconv.ParseInt(numberStr, 10, 64)
 		if err != nil {
 			log.Fatalf("error: %s", err)
 		}
-		fmt.Println("number", num)
-		total += num
+
+		for gear := range inGears {
+			assemblyCounts[gear] += 1
+			if _, ok := assemblyRatios[gear]; ok {
+				assemblyRatios[gear] *= num
+			} else {
+				assemblyRatios[gear] = num
+			}
+		}
 	}
 	matrix := strings.Split(string(content), "\n")
 	for i, line := range matrix {
 		for j, c := range line {
 			if isNumber(c) {
 				numberStr = numberStr + string(c)
-				if isTouchingSymbol(matrix, i, j) {
-					inPart = true
+				assembly := gearAssembly(matrix, i, j)
+				if assembly != nil {
+					inGears[*assembly] = struct{}{}
 				}
 			} else {
 				renderPart()
 			}
 		}
 	}
-	renderPart()
+	renderPart() // Not sure this even happens in real input but this is to handle ending with a number
+
+	var total int64
+	for assembly, count := range assemblyCounts {
+		if count != 2 {
+			continue
+		}
+		total += assemblyRatios[assembly]
+	}
 
 	fmt.Println("total:", total)
 }
 
-func isSymbol(c rune) bool {
-	return !(isPeriod(c) || isNumber(c))
+func isGearIndicator(c rune) bool {
+	return c == '*'
 }
 
 func isPeriod(c rune) bool {
@@ -62,10 +79,14 @@ func isNumber(c rune) bool {
 	return c >= '0' && c <= '9'
 }
 
-func isTouchingSymbol(matrix []string, i, j int) bool {
+type Location struct {
+	x, y int
+}
+
+func gearAssembly(matrix []string, i, j int) *Location {
 	c := matrix[i][j]
 	if !isNumber(rune(c)) {
-		return false
+		return nil
 	}
 
 	for _, coords := range [][2]int{
@@ -82,13 +103,13 @@ func isTouchingSymbol(matrix []string, i, j int) bool {
 		if !ok {
 			continue
 		}
-		if !isSymbol(other) {
+		if !isGearIndicator(other) {
 			continue
 		}
-		return true
+		return &Location{x: coords[1], y: coords[0]}
 	}
 
-	return false
+	return nil
 }
 
 func get(matrix []string, i, j int) (rune, bool) {

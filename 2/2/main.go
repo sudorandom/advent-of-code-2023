@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	content, err := os.ReadFile("./2/input2")
+	content, err := os.ReadFile("./2/2/input")
 	if err != nil {
 		log.Fatalf("error reading input: %s", err)
 	}

@@ -9,45 +9,36 @@ import (
 )
 
 func main() {
-	content, err := os.ReadFile("./3/input2")
+	content, err := os.ReadFile("./3/1/input")
 	if err != nil {
 		log.Fatalf("error reading input: %s", err)
 	}
 
-	inGears := map[Location]struct{}{}
+	var total int64
+	var inPart bool
 	var numberStr string
-	assemblyCounts := map[Location]int{}
-	assemblyRatios := map[Location]int64{}
 	renderPart := func() {
 		defer func() {
 			numberStr = ""
-			inGears = map[Location]struct{}{}
 		}()
-		if len(inGears) == 0 {
+		if !inPart {
 			return
 		}
+		inPart = false
 		num, err := strconv.ParseInt(numberStr, 10, 64)
 		if err != nil {
 			log.Fatalf("error: %s", err)
 		}
-
-		for gear := range inGears {
-			assemblyCounts[gear] += 1
-			if _, ok := assemblyRatios[gear]; ok {
-				assemblyRatios[gear] *= num
-			} else {
-				assemblyRatios[gear] = num
-			}
-		}
+		fmt.Println("number", num)
+		total += num
 	}
 	matrix := strings.Split(string(content), "\n")
 	for i, line := range matrix {
 		for j, c := range line {
 			if isNumber(c) {
 				numberStr = numberStr + string(c)
-				assembly := gearAssembly(matrix, i, j)
-				if assembly != nil {
-					inGears[*assembly] = struct{}{}
+				if isTouchingSymbol(matrix, i, j) {
+					inPart = true
 				}
 			} else {
 				renderPart()
@@ -56,19 +47,11 @@ func main() {
 	}
 	renderPart()
 
-	var total int64
-	for assembly, count := range assemblyCounts {
-		if count != 2 {
-			continue
-		}
-		total += assemblyRatios[assembly]
-	}
-
 	fmt.Println("total:", total)
 }
 
-func isGearIndicator(c rune) bool {
-	return c == '*'
+func isSymbol(c rune) bool {
+	return !(isPeriod(c) || isNumber(c))
 }
 
 func isPeriod(c rune) bool {
@@ -79,14 +62,10 @@ func isNumber(c rune) bool {
 	return c >= '0' && c <= '9'
 }
 
-type Location struct {
-	x, y int
-}
-
-func gearAssembly(matrix []string, i, j int) *Location {
+func isTouchingSymbol(matrix []string, i, j int) bool {
 	c := matrix[i][j]
 	if !isNumber(rune(c)) {
-		return nil
+		return false
 	}
 
 	for _, coords := range [][2]int{
@@ -103,13 +82,13 @@ func gearAssembly(matrix []string, i, j int) *Location {
 		if !ok {
 			continue
 		}
-		if !isGearIndicator(other) {
+		if !isSymbol(other) {
 			continue
 		}
-		return &Location{x: coords[1], y: coords[0]}
+		return true
 	}
 
-	return nil
+	return false
 }
 
 func get(matrix []string, i, j int) (rune, bool) {
